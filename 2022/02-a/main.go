@@ -2,7 +2,9 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 )
@@ -34,6 +36,8 @@ func main() {
 		}
 		total += lu
 	}
+	if err := in.Err(); err != nil && !errors.Is(err, io.EOF) {
+		fmt.Fprintf(os.Stderr, "failed reading from stdin: %v", err)
+	}
 	fmt.Printf("Total: %d\n", total)
-
 }
