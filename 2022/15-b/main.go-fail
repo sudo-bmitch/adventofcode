@@ -1,0 +1,160 @@
+// Note, this was a failed attempt.
+// I started to change it to make partial grids to make a search possible before scrapping it.
+
+package main
+
+import (
+	"bufio"
+	"errors"
+	"fmt"
+	"io"
+	"os"
+	"regexp"
+	"strconv"
+	"strings"
+)
+
+const (
+	multiX = 4000000
+	// limitX   = 4000000
+	// limitY   = 4000000
+	// showGrid = false
+	limitX   = 20
+	limitY   = 20
+	showGrid = true
+)
+
+type point struct{ x, y int }
+type state int
+type grid struct {
+	g                      [][]state
+	minX, minY, maxX, maxY int
+}
+
+const (
+	stateEmpty = iota
+	stateBeacon
+	stateSensor
+	stateCovered
+)
+
+func newGrid(minX, minY, maxX, maxY int) *grid {
+	g := make([][]state, maxX-minX)
+	for i := 0; i < minX-maxX; i++ {
+		g[i] = make([]state, minY-maxY)
+	}
+	return &grid{g: g, minX: minX, minY: minY, maxX: maxX, maxY: maxY}
+}
+func (g *grid) addDetection(sensor, beacon point) {
+	fmt.Printf("Detecting sensor %d,%d and beacon %d,%d\n", sensor.x, sensor.y, beacon.x, beacon.y)
+	if sensor.x >= 0 && sensor.x < limitX && sensor.y >= 0 && sensor.y < limitY {
+		g.g[sensor.x][sensor.y] = stateSensor
+	}
+	if beacon.x >= 0 && beacon.x < limitX && beacon.y >= 0 && beacon.y < limitY {
+		g.g[beacon.x][beacon.y] = stateBeacon
+	}
+	d := mDistance(sensor, beacon)
+	for x := sensor.x - d; x <= sensor.x+d; x++ {
+		if x < 0 || x >= limitX {
+			continue
+		}
+		width := d - diff(sensor.x, x)
+		for y := sensor.y - width; y <= sensor.y+width; y++ {
+			if y < 0 || y >= limitY {
+				continue
+			}
+			if g.g[x][y] == stateEmpty {
+				g.g[x][y] = stateCovered
+			}
+		}
+	}
+}
+
+func main() {
+	g := newGrid(0, 0, limitX, limitY)
+
+	in := bufio.NewScanner(os.Stdin)
+	lineRE := regexp.MustCompile(`^Sensor at x=([0-9\-]+), y=([0-9\-]+): closest beacon is at x=([0-9\-]+), y=([0-9\-]+)$`)
+	// parse input
+	for in.Scan() {
+		line := strings.TrimSpace(in.Text())
+		if line == "" {
+			continue
+		}
+		match := lineRE.FindStringSubmatch(line)
+		if match == nil || len(match) < 5 {
+			fmt.Fprintf(os.Stderr, "failed parse line: %v\n", line)
+			return
+		}
+		sX := mustAtoi(match[1])
+		sY := mustAtoi(match[2])
+		bX := mustAtoi(match[3])
+		bY := mustAtoi(match[4])
+		g.addDetection(point{x: sX, y: sY}, point{x: bX, y: bY})
+	}
+	if err := in.Err(); err != nil && !errors.Is(err, io.EOF) {
+		fmt.Fprintf(os.Stderr, "failed reading from stdin: %v\n", err)
+		return
+	}
+	foundX := -1
+	foundY := -1
+	chars := []rune{'.', 'B', 'S', '#'}
+	if !showGrid {
+		fmt.Printf("Scanning for empty...")
+	}
+	for x := range g.g {
+		for y := range g.g[x] {
+			if showGrid {
+				fmt.Printf("%c", chars[g.g[x][y]])
+			}
+			if g.g[x][y] == stateEmpty {
+				if foundX >= 0 || foundY >= 0 {
+					fmt.Fprintf(os.Stderr, "Multiple answers found, previous %d,%d\n", foundX, foundY)
+				}
+				foundX = x
+				foundY = y
+			}
+		}
+		if showGrid {
+			fmt.Printf("\n")
+		} else if (x+1)%10000 == 0 {
+			fmt.Printf(".")
+		}
+	}
+	if !showGrid {
+		fmt.Printf("\n")
+	}
+	fmt.Printf("Result: %d\n", foundX*multiX+foundY)
+}
+
+func mDistance(a, b point) int {
+	return diff(a.x, b.x) + diff(a.y, b.y)
+}
+
+func diff(a, b int) int {
+	if a > b {
+		return a - b
+	}
+	return b - a
+}
+
+// func max(a, b int) int {
+// 	if a > b {
+// 		return a
+// 	}
+// 	return b
+// }
+// func min(a, b int) int {
+// 	if a < b {
+// 		return a
+// 	}
+// 	return b
+// }
+
+func mustAtoi(s string) int {
+	i, err := strconv.Atoi(s)
+	if err != nil {
+		panic(err)
+	}
+	return i
+}
