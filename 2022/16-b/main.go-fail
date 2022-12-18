@@ -1,0 +1,255 @@
+package main
+
+import (
+	"bufio"
+	"errors"
+	"fmt"
+	"io"
+	"os"
+	"regexp"
+	"sort"
+	"strconv"
+	"strings"
+)
+
+const (
+	totalTime = 26
+	searchers = 2
+)
+
+type valve struct {
+	rate int
+}
+type tunnel struct {
+	valves []string
+}
+type path struct {
+	prev      *path  // previous steps back to nil at the start
+	curName   string // name of valve
+	totalFlow int    // sum of this and all previous open valves for the remainder
+	openValve bool   // is this step opening the valve (or just walking to the location)
+	key       string
+}
+type pathSet [searchers]*path
+
+func main() {
+	valves := map[string]valve{}
+	tunnels := map[string]tunnel{}
+	in := bufio.NewScanner(os.Stdin)
+	lineRE := regexp.MustCompile(`^Valve ([A-Z]+) has flow rate=([0-9]+); tunnels? leads? to valves? (.*)$`)
+
+	// parse input
+	for in.Scan() {
+		line := strings.TrimSpace(in.Text())
+		if line == "" {
+			continue
+		}
+		match := lineRE.FindStringSubmatch(line)
+		if len(match) < 4 {
+			fmt.Fprintf(os.Stderr, "line parsing failed for: %s\n", line)
+			return
+		}
+		v := match[1]
+		rate := mustAtoi(match[2])
+		tunList := strings.Split(match[3], ", ")
+		valves[v] = valve{rate: rate}
+		tunnels[v] = tunnel{valves: tunList}
+	}
+	if err := in.Err(); err != nil && !errors.Is(err, io.EOF) {
+		fmt.Fprintf(os.Stderr, "failed reading from stdin: %v\n", err)
+		return
+	}
+
+	paths := []*pathSet{
+		{{
+			curName: "AA",
+		}, {
+			curName: "AA",
+		}},
+	}
+	endPaths := []*pathSet{}
+	// loop through each minute
+	for t := 1; t < totalTime; t++ {
+		fmt.Printf("Searching at time %d, paths=%d\n", t, len(paths))
+		nextPaths := []*pathSet{}
+		// loop through each path
+		for i, ps := range paths {
+			if i%1000000 == 0 {
+				fmt.Printf("Sample %d:\n", i)
+				ps.print()
+			}
+			moves := [searchers][]*path{}
+			foundValid := false
+			for i, p := range ps {
+				// try opening valve
+				if !p.openValve {
+					tryValve := path{
+						prev:      p,
+						curName:   p.curName,
+						totalFlow: p.totalFlow + valves[p.curName].rate*(totalTime-t),
+						openValve: true,
+					}
+					if tryValve.validPath() {
+						moves[i] = append(moves[i], &tryValve)
+					}
+				}
+				// try each tunnel
+				for _, tun := range tunnels[p.curName].valves {
+					tryTunnel := path{
+						prev:      p,
+						curName:   tun,
+						totalFlow: p.totalFlow,
+					}
+					if tryTunnel.validPath() {
+						moves[i] = append(moves[i], &tryTunnel)
+					}
+				}
+			}
+			for _, m0 := range moves[0] {
+				for _, m1 := range moves[1] {
+					p0, p1 := *m0, *m1
+					psAdd := pathSet{&p0, &p1}
+					if psAdd.validPath() {
+						nextPaths = append(nextPaths, &psAdd)
+						foundValid = true
+					}
+				}
+			}
+			if !foundValid && ps[0].validPath() && ps[1].validPath() && ps.validPath() {
+				endPaths = append(endPaths, ps)
+			}
+		}
+		paths = nextPaths
+	}
+	endPaths = append(endPaths, paths...)
+
+	// look through paths to find best flow, show path
+	bestI := 0
+	bestRate := 0
+	for i, ps := range endPaths {
+		total := 0
+		for _, p := range ps {
+			total += p.totalFlow
+		}
+		if total > bestRate {
+			bestI = i
+			bestRate = total
+		}
+	}
+	fmt.Printf("Best path: \n")
+	endPaths[bestI].print()
+	fmt.Printf("Result: %d\n", bestRate)
+}
+
+var cachePaths = map[string]int{}
+
+// var cacheValves = map[string]int{}
+// var cacheLoc = map[string]int{}
+
+func (ps pathSet) print() {
+	for i, p := range ps {
+		fmt.Printf("Searcher %d: ", i)
+		cur := p
+		txt := []string{}
+		for cur != nil {
+			txt = append(txt, fmt.Sprintf("%s:%d[%t] ", cur.curName, cur.totalFlow, cur.openValve))
+			cur = cur.prev
+		}
+		for i := len(txt) - 1; i >= 0; i-- {
+			fmt.Printf("%s", txt[i])
+			if i > 0 {
+				fmt.Printf(" ")
+			}
+		}
+		fmt.Printf("\n")
+	}
+}
+
+// validPath: quick check for a single path
+func (p path) validPath() bool {
+	if p.openValve && p.totalFlow == p.prev.totalFlow {
+		return false // waste to open a valve that doesn't increase the flow
+	}
+	if !p.openValve {
+		cur := p.prev
+		for cur != nil {
+			if cur.curName == p.curName {
+				return false // walked in a circle without opening a valve
+			}
+			if cur.openValve {
+				break
+			}
+			cur = cur.prev
+		}
+	}
+	// see if another path reached our point with a better flow and the same valves
+	valves := []string{}
+	cur := &p
+	for cur != nil {
+		if cur.key != "" && cachePaths[cur.key] > cur.totalFlow {
+			return false
+		}
+		if cur.openValve {
+			valves = append(valves, cur.curName)
+		}
+		cur = cur.prev
+	}
+	sort.Strings(valves)
+	key := fmt.Sprintf("%s:%s", p.curName, strings.Join(valves, ","))
+	if cachePaths[key] > p.totalFlow {
+		return false
+	}
+	cachePaths[key] = p.totalFlow
+	p.key = key
+	return true
+}
+
+// validPath: rest of check after each path has been checked
+func (ps pathSet) validPath() bool {
+	for i, p := range ps {
+		if p.openValve {
+			for j, cur := range ps {
+				if i == j {
+					cur = cur.prev
+				}
+				for cur != nil {
+					if cur.openValve && cur.curName == p.curName {
+						return false // valve already opened
+					}
+					cur = cur.prev
+				}
+			}
+		}
+	}
+	// check another path reached same endpoint with same open valves and a better flow rate
+	total := 0
+	pos := []string{}
+	valves := []string{}
+	for _, p := range ps {
+		total += p.totalFlow
+		pos = append(pos, p.curName)
+		cur := p
+		for cur != nil {
+			if cur.openValve {
+				valves = append(valves, cur.curName)
+			}
+			cur = cur.prev
+		}
+	}
+	sort.Strings(pos)
+	sort.Strings(valves)
+	key := fmt.Sprintf("%s:%s", strings.Join(pos, ","), strings.Join(valves, ","))
+	if cachePaths[key] > total {
+		return false
+	}
+	cachePaths[key] = total
+	return true
+}
+
+func mustAtoi(s string) int {
+	i, err := strconv.Atoi(s)
+	if err != nil {
+		panic(err)
+	}
+	return i
+}

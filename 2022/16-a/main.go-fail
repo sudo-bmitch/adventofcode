@@ -1,0 +1,189 @@
+package main
+
+import (
+	"bufio"
+	"errors"
+	"fmt"
+	"io"
+	"os"
+	"regexp"
+	"sort"
+	"strconv"
+	"strings"
+)
+
+const (
+	totalTime = 30
+)
+
+type valve struct {
+	rate int
+}
+type tunnel struct {
+	valves []string
+}
+type path struct {
+	prev      *path  // previous steps back to nil at the start
+	curName   string // name of valve
+	totalFlow int    // sum of this and all previous open valves for the remainder
+	openValve bool   // is this step opening the valve (or just walking to the location)
+}
+
+func main() {
+	valves := map[string]valve{}
+	tunnels := map[string]tunnel{}
+	in := bufio.NewScanner(os.Stdin)
+	lineRE := regexp.MustCompile(`^Valve ([A-Z]+) has flow rate=([0-9]+); tunnels? leads? to valves? (.*)$`)
+
+	// parse input
+	for in.Scan() {
+		line := strings.TrimSpace(in.Text())
+		if line == "" {
+			continue
+		}
+		match := lineRE.FindStringSubmatch(line)
+		if len(match) < 4 {
+			fmt.Fprintf(os.Stderr, "line parsing failed for: %s\n", line)
+			return
+		}
+		v := match[1]
+		rate := mustAtoi(match[2])
+		tunList := strings.Split(match[3], ", ")
+		valves[v] = valve{rate: rate}
+		tunnels[v] = tunnel{valves: tunList}
+	}
+	if err := in.Err(); err != nil && !errors.Is(err, io.EOF) {
+		fmt.Fprintf(os.Stderr, "failed reading from stdin: %v\n", err)
+		return
+	}
+
+	paths := []*path{
+		{
+			curName: "AA",
+		},
+	}
+	endPaths := []*path{}
+	// loop through each minute
+	for t := 1; t < totalTime; t++ {
+		fmt.Printf("Searching at time %d, paths=%d\n", t, len(paths))
+		nextPaths := []*path{}
+		// loop through each path
+		for _, p := range paths {
+			p := p // can't remember if the pointer somehow gets reused
+			foundValid := false
+			// try opening valve
+			if !p.openValve {
+				tryValve := path{
+					prev:      p,
+					curName:   p.curName,
+					totalFlow: p.totalFlow + valves[p.curName].rate*(totalTime-t),
+					openValve: true,
+				}
+				if tryValve.validPath() {
+					nextPaths = append(nextPaths, &tryValve)
+					foundValid = true
+				}
+			}
+			// try each tunnel
+			for _, tun := range tunnels[p.curName].valves {
+				tryTunnel := path{
+					prev:      p,
+					curName:   tun,
+					totalFlow: p.totalFlow,
+				}
+				if tryTunnel.validPath() {
+					nextPaths = append(nextPaths, &tryTunnel)
+					foundValid = true
+				}
+			}
+			if !foundValid && p.validPath() {
+				endPaths = append(endPaths, p)
+			}
+		}
+		paths = nextPaths
+	}
+	endPaths = append(endPaths, paths...)
+
+	// look through paths to find best flow, show path
+	bestI := 0
+	bestRate := 0
+	for i, p := range endPaths {
+		if p.totalFlow > bestRate {
+			bestI = i
+			bestRate = p.totalFlow
+		}
+	}
+	fmt.Printf("Best path: ")
+	endPaths[bestI].print()
+	fmt.Printf("Result: %d\n", bestRate)
+}
+
+var cachePaths = map[string]int{}
+
+func (p path) print() {
+	cur := &p
+	txt := []string{}
+	for cur != nil {
+		txt = append(txt, fmt.Sprintf("%s:%d[%t] ", cur.curName, cur.totalFlow, cur.openValve))
+		cur = cur.prev
+	}
+	for i := len(txt) - 1; i >= 0; i-- {
+		fmt.Printf("%s", txt[i])
+		if i > 0 {
+			fmt.Printf(" ")
+		}
+	}
+	fmt.Printf("\n")
+}
+
+// return false if the path isn't valid
+func (p path) validPath() bool {
+	if p.openValve {
+		cur := p.prev
+		if p.totalFlow == cur.totalFlow {
+			return false // waste to open a valve that doesn't increase the flow
+		}
+		for cur != nil {
+			if cur.openValve && cur.curName == p.curName {
+				return false // valve already opened
+			}
+			cur = cur.prev
+		}
+	}
+	if !p.openValve {
+		cur := p.prev
+		for cur != nil {
+			if cur.curName == p.curName {
+				return false // walked in a circle without opening a valve
+			}
+			if cur.openValve {
+				break
+			}
+			cur = cur.prev
+		}
+	}
+	// check another path reached same endpoint with same open valves and a better flow rate
+	valves := []string{}
+	cur := &p
+	for cur != nil {
+		if cur.openValve {
+			valves = append(valves, cur.curName)
+		}
+		cur = cur.prev
+	}
+	sort.Strings(valves)
+	key := fmt.Sprintf("%s:%s", p.curName, strings.Join(valves, ","))
+	if cachePaths[key] > p.totalFlow {
+		return false
+	}
+	cachePaths[key] = p.totalFlow
+	return true
+}
+
+func mustAtoi(s string) int {
+	i, err := strconv.Atoi(s)
+	if err != nil {
+		panic(err)
+	}
+	return i
+}
