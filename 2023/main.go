@@ -43,4 +43,6 @@ func runDay() error {
 var days = map[string]func([]string, io.Reader) (string, error){
 	"01a": day01a,
 	"01b": day01b,
+	"02a": day02a,
+	"02b": day02b,
 }
