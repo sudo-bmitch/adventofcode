@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-var data03Data = []byte(`467..114..
+var day03Data = []byte(`467..114..
 ...*......
 ..35..633.
 ......#...
@@ -18,7 +18,7 @@ var data03Data = []byte(`467..114..
 
 func TestDay03a(t *testing.T) {
 	expect := "4361"
-	r := bytes.NewReader(data03Data)
+	r := bytes.NewReader(day03Data)
 	result, err := day03a([]string{}, r)
 	if err != nil {
 		t.Errorf("failed with error: %v", err)
@@ -29,7 +29,7 @@ func TestDay03a(t *testing.T) {
 
 func TestDay03b(t *testing.T) {
 	expect := "467835"
-	r := bytes.NewReader(data03Data)
+	r := bytes.NewReader(day03Data)
 	result, err := day03b([]string{}, r)
 	if err != nil {
 		t.Errorf("failed with error: %v", err)
