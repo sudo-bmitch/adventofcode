@@ -67,32 +67,17 @@ func day04Parse(line string) (card, error) {
 	if len(winHave) != 2 {
 		return c, fmt.Errorf("failed to parse pipe from %s", colon[1])
 	}
-	winNums, err := day04ParseNums(winHave[0])
+	winNums, err := parseNumListBySpace(winHave[0])
 	if err != nil {
 		return c, fmt.Errorf("failed to parse win numbers from %s: %w", winHave[0], err)
 	}
-	haveNums, err := day04ParseNums(winHave[1])
+	haveNums, err := parseNumListBySpace(winHave[1])
 	if err != nil {
 		return c, fmt.Errorf("failed to parse have numbers from %s: %w", winHave[1], err)
 	}
 	c.win = winNums
 	c.have = haveNums
 	return c, nil
-}
-
-func day04ParseNums(numStr string) ([]int, error) {
-	numList := []int{}
-	numSplit := strings.Split(numStr, " ")
-	for _, curStr := range numSplit {
-		if curStr != "" {
-			i, err := strconv.Atoi(curStr)
-			if err != nil {
-				return numList, err
-			}
-			numList = append(numList, i)
-		}
-	}
-	return numList, nil
 }
 
 func day04Matches(win, have []int) int {
