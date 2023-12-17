@@ -6,7 +6,7 @@ import (
 	"io"
 )
 
-type grid struct {
+type day03Grid struct {
 	numbers map[pos]num
 	objs    map[pos]rune
 }
@@ -55,7 +55,7 @@ func day03b(args []string, rdr io.Reader) (string, error) {
 	return fmt.Sprintf("%d", sum), nil
 }
 
-func day03ObjNeighbor(g grid, n num, p pos) bool {
+func day03ObjNeighbor(g day03Grid, n num, p pos) bool {
 	for x := p.x - 1; x <= p.x+1; x++ {
 		if x < 0 {
 			continue
@@ -72,7 +72,7 @@ func day03ObjNeighbor(g grid, n num, p pos) bool {
 	return false
 }
 
-func day03NumNeighbors(g grid, p pos) []num {
+func day03NumNeighbors(g day03Grid, p pos) []num {
 	nList := []num{}
 	for pCur, nCur := range g.numbers {
 		if p.x >= pCur.x-1 && p.x <= pCur.x+1 && p.y >= pCur.y-nCur.size && p.y <= pCur.y+1 {
@@ -82,8 +82,8 @@ func day03NumNeighbors(g grid, p pos) []num {
 	return nList
 }
 
-func day03Parse(rdr io.Reader) (grid, error) {
-	g := grid{
+func day03Parse(rdr io.Reader) (day03Grid, error) {
+	g := day03Grid{
 		numbers: map[pos]num{},
 		objs:    map[pos]rune{},
 	}
