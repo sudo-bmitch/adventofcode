@@ -75,4 +75,6 @@ var days = map[string]func([]string, io.Reader) (string, error){
 	"16b": day16b,
 	"17a": day17a,
 	"17b": day17b,
+	"18a": day18a,
+	"18b": day18b,
 }

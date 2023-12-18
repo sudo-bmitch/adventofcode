@@ -60,6 +60,10 @@ func (p Pos) MoveD(d Dir) Pos {
 	return p.MoveP(DirPos[d])
 }
 
+func (p Pos) String() string {
+	return fmt.Sprintf("[%d,%d]", p.X, p.Y)
+}
+
 type Dir int
 
 const (
