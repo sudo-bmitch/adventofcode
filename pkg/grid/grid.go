@@ -4,12 +4,28 @@ package grid
 import (
 	"fmt"
 	"io"
+	"iter"
 	"strings"
 )
 
 type Grid struct {
 	G    [][]rune
 	H, W int
+}
+
+func New(w, h int) (Grid, error) {
+	if w <= 0 || h <= 0 {
+		return Grid{}, fmt.Errorf("grid width and height must be positive")
+	}
+	g := Grid{
+		G: make([][]rune, h),
+		W: w,
+		H: h,
+	}
+	for i := range g.G {
+		g.G[i] = make([]rune, w)
+	}
+	return g, nil
 }
 
 func FromReader(rdr io.Reader) (Grid, error) {
@@ -46,6 +62,18 @@ func (g Grid) ValidPos(p Pos) bool {
 		return true
 	}
 	return false
+}
+
+func (g Grid) Walk() iter.Seq2[Pos, rune] {
+	return func(yield func(Pos, rune) bool) {
+		for x := 0; x < g.H; x++ {
+			for y := 0; y < g.W; y++ {
+				if !yield(Pos{X: x, Y: y}, g.G[x][y]) {
+					return
+				}
+			}
+		}
+	}
 }
 
 type Pos struct {
