@@ -108,3 +108,28 @@ var DirPos = [DirLen]Pos{
 	South: {X: 1},
 	West:  {Y: -1},
 }
+
+func (d Dir) String() string {
+	switch d {
+	case North:
+		return "north"
+	case East:
+		return "east"
+	case South:
+		return "south"
+	case West:
+		return "west"
+	default:
+		return "unknown"
+	}
+}
+
+func DirIter() iter.Seq[Dir] {
+	return func(yield func(Dir) bool) {
+		for d := North; d < DirLen; d++ {
+			if !yield(d) {
+				return
+			}
+		}
+	}
+}
