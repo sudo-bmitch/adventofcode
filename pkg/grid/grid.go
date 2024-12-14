@@ -57,6 +57,15 @@ func FromString(s string) (Grid, error) {
 	return g, nil
 }
 
+func (g Grid) String() string {
+	buf := strings.Builder{}
+	for _, row := range g.G {
+		buf.WriteString(string(row))
+		buf.WriteRune('\n')
+	}
+	return buf.String()
+}
+
 func (g Grid) ValidPos(p Pos) bool {
 	if p.X >= 0 && p.Y >= 0 && p.X < g.H && p.Y < g.W {
 		return true
