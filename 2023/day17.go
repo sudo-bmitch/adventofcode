@@ -34,8 +34,8 @@ func day17a(args []string, rdr io.Reader) (string, error) {
 	}
 
 	ends := []day17PathEnd{
-		{pos: grid.Pos{X: 0, Y: 0}, dir: grid.South},
-		{pos: grid.Pos{X: 0, Y: 0}, dir: grid.East},
+		{pos: grid.Pos{Row: 0, Col: 0}, dir: grid.South},
+		{pos: grid.Pos{Row: 0, Col: 0}, dir: grid.East},
 	}
 	curBest := 0
 	endBest := -1
@@ -65,21 +65,21 @@ func day17a(args []string, rdr io.Reader) (string, error) {
 				curHeat := ends[e].heat
 				for steps := 1; steps <= 3; steps++ {
 					dPos := grid.DirPos[t]
-					dPos.X *= steps
-					dPos.Y *= steps
+					dPos.Row *= steps
+					dPos.Col *= steps
 					tryPos := ends[e].pos.MoveP(dPos)
 					if !g.ValidPos(tryPos) {
 						break // off the map
 					}
-					curHeat += int(g.G[tryPos.X][tryPos.Y] - '0')
+					curHeat += int(g.G[tryPos.Row][tryPos.Col] - '0')
 					if endBest > 0 && curHeat > endBest {
 						break // path gets too hot
 					}
-					if best[tryPos.X][tryPos.Y][t] > 0 && best[tryPos.X][tryPos.Y][t] <= curHeat {
+					if best[tryPos.Row][tryPos.Col][t] > 0 && best[tryPos.Row][tryPos.Col][t] <= curHeat {
 						continue // another path already reached here going this way
 					}
 					// found a new best, add the end
-					best[tryPos.X][tryPos.Y][t] = curHeat
+					best[tryPos.Row][tryPos.Col][t] = curHeat
 					ends = append(ends, day17PathEnd{pos: tryPos, dir: t, heat: curHeat})
 				}
 			}
@@ -112,8 +112,8 @@ func day17b(args []string, rdr io.Reader) (string, error) {
 	}
 
 	ends := []day17PathEnd{
-		{pos: grid.Pos{X: 0, Y: 0}, dir: grid.South},
-		{pos: grid.Pos{X: 0, Y: 0}, dir: grid.East},
+		{pos: grid.Pos{Row: 0, Col: 0}, dir: grid.South},
+		{pos: grid.Pos{Row: 0, Col: 0}, dir: grid.East},
 	}
 	curBest := 0
 	endBest := -1
@@ -144,31 +144,31 @@ func day17b(args []string, rdr io.Reader) (string, error) {
 				// take first three steps, add heat from each
 				for steps := 1; steps <= 3; steps++ {
 					dPos := grid.DirPos[t]
-					dPos.X *= steps
-					dPos.Y *= steps
+					dPos.Row *= steps
+					dPos.Col *= steps
 					tryPos := ends[e].pos.MoveP(dPos)
 					if !g.ValidPos(tryPos) {
 						break // off the map
 					}
-					curHeat += int(g.G[tryPos.X][tryPos.Y] - '0')
+					curHeat += int(g.G[tryPos.Row][tryPos.Col] - '0')
 				}
 				for steps := 4; steps <= 10; steps++ {
 					dPos := grid.DirPos[t]
-					dPos.X *= steps
-					dPos.Y *= steps
+					dPos.Row *= steps
+					dPos.Col *= steps
 					tryPos := ends[e].pos.MoveP(dPos)
 					if !g.ValidPos(tryPos) {
 						break // off the map
 					}
-					curHeat += int(g.G[tryPos.X][tryPos.Y] - '0')
+					curHeat += int(g.G[tryPos.Row][tryPos.Col] - '0')
 					if endBest > 0 && curHeat > endBest {
 						break // path gets too hot
 					}
-					if best[tryPos.X][tryPos.Y][t] > 0 && best[tryPos.X][tryPos.Y][t] <= curHeat {
+					if best[tryPos.Row][tryPos.Col][t] > 0 && best[tryPos.Row][tryPos.Col][t] <= curHeat {
 						continue // another path already reached here going this way
 					}
 					// found a new best, add the end
-					best[tryPos.X][tryPos.Y][t] = curHeat
+					best[tryPos.Row][tryPos.Col][t] = curHeat
 					ends = append(ends, day17PathEnd{pos: tryPos, dir: t, heat: curHeat})
 				}
 			}
@@ -178,7 +178,7 @@ func day17b(args []string, rdr io.Reader) (string, error) {
 		}
 		curBest = nextBest
 		// check for endBest
-		for d := grid.Dir(0); d < grid.DirLen; d++ {
+		for d := range grid.DirLen {
 			if best[g.H-1][g.W-1][d] > 0 && (endBest < 0 || best[g.H-1][g.W-1][d] < endBest) {
 				endBest = best[g.H-1][g.W-1][d]
 			}

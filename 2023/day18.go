@@ -21,8 +21,8 @@ type day18Step struct {
 type day18Plot bool
 
 func day18a(args []string, rdr io.Reader) (string, error) {
-	minX, minY, maxX, maxY := 0, 0, 0, 0
-	curPos := grid.Pos{X: 0, Y: 0}
+	minRow, minCol, maxRow, maxCol := 0, 0, 0, 0
+	curPos := grid.Pos{Row: 0, Col: 0}
 	plot := map[grid.Pos]day18Plot{
 		curPos: true,
 	}
@@ -41,23 +41,23 @@ func day18a(args []string, rdr io.Reader) (string, error) {
 			curPos = curPos.MoveD(s.dirA)
 			plot[curPos] = true
 		}
-		if curPos.X < minX {
-			minX = curPos.X
-		} else if curPos.X > maxX {
-			maxX = curPos.X
+		if curPos.Row < minRow {
+			minRow = curPos.Row
+		} else if curPos.Row > maxRow {
+			maxRow = curPos.Row
 		}
-		if curPos.Y < minY {
-			minY = curPos.Y
-		} else if curPos.Y > maxY {
-			maxY = curPos.Y
+		if curPos.Col < minCol {
+			minCol = curPos.Col
+		} else if curPos.Col > maxCol {
+			maxCol = curPos.Col
 		}
 	}
 	sum := 0
-	for x := minX; x <= maxX; x++ {
+	for r := minRow; r <= maxRow; r++ {
 		corner := 0 // 1 corner entered from above, -1 corner entered from below
 		verticals := 0
-		for y := minY; y <= maxY; y++ {
-			p := grid.Pos{X: x, Y: y}
+		for c := minCol; c <= maxCol; c++ {
+			p := grid.Pos{Row: r, Col: c}
 			if plot[p] {
 				// look above and below to track corners and verticals
 				above := plot[p.MoveD(grid.North)]
@@ -91,18 +91,18 @@ func day18a(args []string, rdr io.Reader) (string, error) {
 			}
 		}
 		if corner != 0 {
-			return "", fmt.Errorf("corner did not return to 0 on row %d", x)
+			return "", fmt.Errorf("corner did not return to 0 on row %d", r)
 		}
 		if verticals%2 != 0 {
-			return "", fmt.Errorf("odd number of verticals on row %d: %d", x, verticals)
+			return "", fmt.Errorf("odd number of verticals on row %d: %d", r, verticals)
 		}
 	}
 	return fmt.Sprintf("%d", sum), nil
 }
 
 func day18b(args []string, rdr io.Reader) (string, error) {
-	minX, minY, maxX, maxY := 0, 0, 0, 0
-	curPos := grid.Pos{X: 0, Y: 0}
+	minRow, minCol, maxRow, maxCol := 0, 0, 0, 0
+	curPos := grid.Pos{Row: 0, Col: 0}
 	plot := map[grid.Pos]day18Plot{
 		curPos: true,
 	}
@@ -121,32 +121,32 @@ func day18b(args []string, rdr io.Reader) (string, error) {
 			curPos = curPos.MoveD(s.dirB)
 			plot[curPos] = true
 		}
-		if curPos.X < minX {
-			minX = curPos.X
-		} else if curPos.X > maxX {
-			maxX = curPos.X
+		if curPos.Row < minRow {
+			minRow = curPos.Row
+		} else if curPos.Row > maxRow {
+			maxRow = curPos.Row
 		}
-		if curPos.Y < minY {
-			minY = curPos.Y
-		} else if curPos.Y > maxY {
-			maxY = curPos.Y
+		if curPos.Col < minCol {
+			minCol = curPos.Col
+		} else if curPos.Col > maxCol {
+			maxCol = curPos.Col
 		}
 	}
-	fmt.Fprintf(os.Stderr, "plot is from [%d,%d] to [%d,%d]\n", minX, minY, maxX, maxY)
-	keys := make([][]int, maxX-minX+1)
+	fmt.Fprintf(os.Stderr, "plot is from [%d,%d] to [%d,%d]\n", minRow, minCol, maxRow, maxCol)
+	keys := make([][]int, maxRow-minRow+1)
 	for p := range plot {
-		kx := p.X - minX
-		ky := p.Y - minY
+		kx := p.Row - minRow
+		ky := p.Col - minCol
 		keys[kx] = append(keys[kx], ky)
 	}
 	sum := 0
-	for x := range keys {
+	for r := range keys {
 		corner := 0 // 1 corner entered from above, -1 corner entered from below
 		verticals := 0
-		slices.Sort(keys[x])
+		slices.Sort(keys[r])
 		prevY := -1
-		for _, y := range keys[x] {
-			p := grid.Pos{X: x + minX, Y: y + minY}
+		for _, c := range keys[r] {
+			p := grid.Pos{Row: r + minRow, Col: c + minCol}
 			// look above and below to track corners and verticals
 			above := plot[p.MoveD(grid.North)]
 			below := plot[p.MoveD(grid.South)]
@@ -173,17 +173,17 @@ func day18b(args []string, rdr io.Reader) (string, error) {
 			}
 			sum++ // add currently dug space
 			if corner != 0 && verticals%2 != 0 {
-				sum += y - prevY - 1 // add space between even number of verticals (even/odd rule)
+				sum += c - prevY - 1 // add space between even number of verticals (even/odd rule)
 			} else if corner == 0 && verticals%2 == 0 {
-				sum += y - prevY - 1 // add space between even number of verticals (even/odd rule)
+				sum += c - prevY - 1 // add space between even number of verticals (even/odd rule)
 			}
-			prevY = y
+			prevY = c
 		}
 		if corner != 0 {
-			return "", fmt.Errorf("corner did not return to 0 on row %d", x+minX)
+			return "", fmt.Errorf("corner did not return to 0 on row %d", r+minRow)
 		}
 		if verticals%2 != 0 {
-			return "", fmt.Errorf("odd number of verticals on row %d: %d", x+minX, verticals)
+			return "", fmt.Errorf("odd number of verticals on row %d: %d", r+minRow, verticals)
 		}
 	}
 	return fmt.Sprintf("%d", sum), nil

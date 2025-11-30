@@ -32,7 +32,7 @@ func day15a(args []string, rdr io.Reader) (string, error) {
 	for p, r := range g.Walk() {
 		if r == '@' {
 			guard = p
-			g.G[p.X][p.Y] = '.'
+			g.G[p.Row][p.Col] = '.'
 			break
 		}
 	}
@@ -52,9 +52,9 @@ func day15a(args []string, rdr io.Reader) (string, error) {
 			continue
 		}
 		// switch based on next position
-		switch g.G[next.X][next.Y] {
+		switch g.G[next.Row][next.Col] {
 		default:
-			return "", fmt.Errorf("unknown map contents %c at position %s", g.G[next.X][next.Y], next.String())
+			return "", fmt.Errorf("unknown map contents %c at position %s", g.G[next.Row][next.Col], next.String())
 		case '#':
 			// block moving into a wall
 		case '.':
@@ -63,15 +63,15 @@ func day15a(args []string, rdr io.Reader) (string, error) {
 		case 'O':
 			// try pushing boxes
 			for i := 1; ; i++ {
-				check := guard.MoveP(grid.Pos{X: move.X * i, Y: move.Y * i})
-				if !g.ValidPos(check) || g.G[check.X][check.Y] == '#' {
+				check := guard.MoveP(grid.Pos{Row: move.Row * i, Col: move.Col * i})
+				if !g.ValidPos(check) || g.G[check.Row][check.Col] == '#' {
 					// hit the wall, no where to push boxes
 					break
 				}
-				if g.G[check.X][check.Y] == '.' {
+				if g.G[check.Row][check.Col] == '.' {
 					// found a spot, shift boxes, move guard
-					g.G[check.X][check.Y] = 'O'
-					g.G[next.X][next.Y] = '.'
+					g.G[check.Row][check.Col] = 'O'
+					g.G[next.Row][next.Col] = '.'
 					guard = next
 					break
 				}
@@ -80,9 +80,9 @@ func day15a(args []string, rdr io.Reader) (string, error) {
 	}
 
 	sum := 0
-	for p, r := range g.Walk() {
-		if r == 'O' {
-			sum += (p.X * 100) + p.Y
+	for p, v := range g.Walk() {
+		if v == 'O' {
+			sum += (p.Row * 100) + p.Col
 		}
 	}
 
@@ -108,20 +108,20 @@ func day15b(args []string, rdr io.Reader) (string, error) {
 		return "", err
 	}
 	guard := grid.Pos{}
-	for p, r := range gOrig.Walk() {
-		px := p.X
-		py0 := p.Y * 2
-		py1 := py0 + 1
-		switch r {
+	for p, v := range gOrig.Walk() {
+		pr := p.Row
+		pc0 := p.Col * 2
+		pc1 := pc0 + 1
+		switch v {
 		case '#':
-			g.G[px][py0], g.G[px][py1] = '#', '#'
+			g.G[pr][pc0], g.G[pr][pc1] = '#', '#'
 		case 'O':
-			g.G[px][py0], g.G[px][py1] = '[', ']'
+			g.G[pr][pc0], g.G[pr][pc1] = '[', ']'
 		case '.':
-			g.G[px][py0], g.G[px][py1] = '.', '.'
+			g.G[pr][pc0], g.G[pr][pc1] = '.', '.'
 		case '@':
-			guard.X, guard.Y = px, py0
-			g.G[px][py0], g.G[px][py1] = '.', '.'
+			guard.Row, guard.Col = pr, pc0
+			g.G[pr][pc0], g.G[pr][pc1] = '.', '.'
 		}
 	}
 	for _, m := range inSplit[1] {
@@ -139,9 +139,9 @@ func day15b(args []string, rdr io.Reader) (string, error) {
 			continue
 		}
 		// switch based on next position
-		switch g.G[next.X][next.Y] {
+		switch g.G[next.Row][next.Col] {
 		default:
-			return "", fmt.Errorf("unknown map contents %c at position %s", g.G[next.X][next.Y], next.String())
+			return "", fmt.Errorf("unknown map contents %c at position %s", g.G[next.Row][next.Col], next.String())
 		case '#':
 			// block moving into a wall
 		case '.':
@@ -155,40 +155,40 @@ func day15b(args []string, rdr io.Reader) (string, error) {
 			if err != nil {
 				return "", err
 			}
-			moveG.G[next.X][next.Y] = g.G[next.X][next.Y]
-			if move.X != 0 {
-				if g.G[next.X][next.Y] == '[' {
-					moveG.G[next.X][next.Y+1] = ']'
+			moveG.G[next.Row][next.Col] = g.G[next.Row][next.Col]
+			if move.Row != 0 {
+				if g.G[next.Row][next.Col] == '[' {
+					moveG.G[next.Row][next.Col+1] = ']'
 				}
-				if g.G[next.X][next.Y] == ']' {
-					moveG.G[next.X][next.Y-1] = '['
+				if g.G[next.Row][next.Col] == ']' {
+					moveG.G[next.Row][next.Col-1] = '['
 				}
 			}
 			// fail if object moves to end of map or wall, succeed if nothing was moving in last scanned row
 			wall := false
 			done := false
-			moveInner := grid.Pos{X: move.Y * move.Y, Y: move.X * move.X}
-			scanOuter := grid.Pos{X: next.X * move.X * move.X, Y: next.Y * move.Y * move.Y}
+			moveInner := grid.Pos{Row: move.Col * move.Col, Col: move.Row * move.Row}
+			scanOuter := grid.Pos{Row: next.Row * move.Row * move.Row, Col: next.Col * move.Col * move.Col}
 			for g.ValidPos(scanOuter) && !wall && !done {
 				scanInner := scanOuter
 				done = true
 				for g.ValidPos(scanInner) && !wall {
-					if moveG.G[scanInner.X][scanInner.Y] == '[' || moveG.G[scanInner.X][scanInner.Y] == ']' {
+					if moveG.G[scanInner.Row][scanInner.Col] == '[' || moveG.G[scanInner.Row][scanInner.Col] == ']' {
 						scanNext := scanInner.MoveP(move)
-						if !g.ValidPos(scanNext) || g.G[scanNext.X][scanNext.Y] == '#' {
+						if !g.ValidPos(scanNext) || g.G[scanNext.Row][scanNext.Col] == '#' {
 							wall = true
 							break
 						}
-						if g.G[scanNext.X][scanNext.Y] != '.' {
+						if g.G[scanNext.Row][scanNext.Col] != '.' {
 							// mark the object as moving
-							moveG.G[scanNext.X][scanNext.Y] = g.G[scanNext.X][scanNext.Y]
+							moveG.G[scanNext.Row][scanNext.Col] = g.G[scanNext.Row][scanNext.Col]
 							// for vertical movements, also include other half of the box
-							if move.X != 0 {
-								if g.G[scanNext.X][scanNext.Y] == '[' {
-									moveG.G[scanNext.X][scanNext.Y+1] = ']'
+							if move.Row != 0 {
+								if g.G[scanNext.Row][scanNext.Col] == '[' {
+									moveG.G[scanNext.Row][scanNext.Col+1] = ']'
 								}
-								if g.G[scanNext.X][scanNext.Y] == ']' {
-									moveG.G[scanNext.X][scanNext.Y-1] = '['
+								if g.G[scanNext.Row][scanNext.Col] == ']' {
+									moveG.G[scanNext.Row][scanNext.Col-1] = '['
 								}
 							}
 							done = false
@@ -204,17 +204,17 @@ func day15b(args []string, rdr io.Reader) (string, error) {
 			}
 			guard = next
 			// start moving blocks, work from far edge back, placing spaces where object moves from
-			moveBack := grid.Pos{X: move.X * -1, Y: move.Y * -1}
+			moveBack := grid.Pos{Row: move.Row * -1, Col: move.Col * -1}
 			done = false
 			scanOuter = scanOuter.MoveP(moveBack)
 			for g.ValidPos(scanOuter) && !done {
 				scanInner := scanOuter
 				done = true
 				for g.ValidPos(scanInner) {
-					if moveG.G[scanInner.X][scanInner.Y] != 0 {
+					if moveG.G[scanInner.Row][scanInner.Col] != 0 {
 						moveNext := scanInner.MoveP(move)
-						g.G[moveNext.X][moveNext.Y] = moveG.G[scanInner.X][scanInner.Y]
-						g.G[scanInner.X][scanInner.Y] = '.'
+						g.G[moveNext.Row][moveNext.Col] = moveG.G[scanInner.Row][scanInner.Col]
+						g.G[scanInner.Row][scanInner.Col] = '.'
 						done = false
 					}
 					scanInner = scanInner.MoveP(moveInner)
@@ -227,7 +227,7 @@ func day15b(args []string, rdr io.Reader) (string, error) {
 	sum := 0
 	for p, r := range g.Walk() {
 		if r == '[' {
-			sum += (p.X * 100) + p.Y
+			sum += (p.Row * 100) + p.Col
 		}
 	}
 

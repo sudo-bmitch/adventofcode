@@ -31,9 +31,9 @@ func day10Run(_ []string, rdr io.Reader, trackVisited bool) (string, error) {
 		return "", err
 	}
 	sum := 0
-	for p, r := range g.Walk() {
+	for p, v := range g.Walk() {
 		// find each trail head
-		if r != '0' {
+		if v != '0' {
 			continue
 		}
 		// for each trail head, attempt to walk each path up to find peak, only visiting each position once
@@ -41,7 +41,7 @@ func day10Run(_ []string, rdr io.Reader, trackVisited bool) (string, error) {
 		if err != nil {
 			return "", err
 		}
-		visited.G[p.X][p.Y] = '#'
+		visited.G[p.Row][p.Col] = '#'
 		path := []day10Path{
 			{p: p, d: grid.North},
 		}
@@ -49,11 +49,11 @@ func day10Run(_ []string, rdr io.Reader, trackVisited bool) (string, error) {
 			// try moving
 			head := path[len(path)-1]
 			try := head.p.MoveD(head.d)
-			if g.ValidPos(try) && g.G[head.p.X][head.p.Y]+1 == g.G[try.X][try.Y] && (!trackVisited || visited.G[try.X][try.Y] != '#') {
+			if g.ValidPos(try) && g.G[head.p.Row][head.p.Col]+1 == g.G[try.Row][try.Col] && (!trackVisited || visited.G[try.Row][try.Col] != '#') {
 				// if successful, add to visited and path, inc sum if peak
 				path = append(path, day10Path{p: try, d: grid.North})
-				visited.G[try.X][try.Y] = '#'
-				if g.G[try.X][try.Y] == '9' {
+				visited.G[try.Row][try.Col] = '#'
+				if g.G[try.Row][try.Col] == '9' {
 					sum++
 				}
 			} else {

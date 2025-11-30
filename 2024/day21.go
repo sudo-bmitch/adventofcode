@@ -40,26 +40,26 @@ func day21Run(rdr io.Reader, numControllers int) (int, error) {
 	// define controllers and link them
 	numPad := day21Controller{
 		keys: map[rune]grid.Pos{
-			'7': {X: 0, Y: 0},
-			'8': {X: 0, Y: 1},
-			'9': {X: 0, Y: 2},
-			'4': {X: 1, Y: 0},
-			'5': {X: 1, Y: 1},
-			'6': {X: 1, Y: 2},
-			'1': {X: 2, Y: 0},
-			'2': {X: 2, Y: 1},
-			'3': {X: 2, Y: 2},
-			'0': {X: 3, Y: 1},
-			'A': {X: 3, Y: 2},
+			'7': {Row: 0, Col: 0},
+			'8': {Row: 0, Col: 1},
+			'9': {Row: 0, Col: 2},
+			'4': {Row: 1, Col: 0},
+			'5': {Row: 1, Col: 1},
+			'6': {Row: 1, Col: 2},
+			'1': {Row: 2, Col: 0},
+			'2': {Row: 2, Col: 1},
+			'3': {Row: 2, Col: 2},
+			'0': {Row: 3, Col: 1},
+			'A': {Row: 3, Col: 2},
 		},
 	}
 	numPad.setValid()
 	dirKeys := map[rune]grid.Pos{
-		'^': {X: 0, Y: 1},
-		'A': {X: 0, Y: 2},
-		'<': {X: 1, Y: 0},
-		'v': {X: 1, Y: 1},
-		'>': {X: 1, Y: 2},
+		'^': {Row: 0, Col: 1},
+		'A': {Row: 0, Col: 2},
+		'<': {Row: 1, Col: 0},
+		'v': {Row: 1, Col: 1},
+		'>': {Row: 1, Col: 2},
 	}
 	dirPads := make([]day21Controller, numControllers)
 	for i := range dirPads {
@@ -162,14 +162,14 @@ func day21GenOpts(controller day21Controller, start, end grid.Pos) []string {
 		cur := queue[0]
 		queue = queue[1:]
 		start := cur[len(cur)-1]
-		// this isn't a random search, every valid path is shrinking either dx or dy
-		dx, dy := end.X-start.X, end.Y-start.Y
-		if dx != 0 {
+		// this isn't a random search, every valid path is shrinking either dr or dc
+		dr, dc := end.Row-start.Row, end.Col-start.Col
+		if dr != 0 {
 			next := start
-			if dx > 0 {
-				next = next.MoveP(grid.Pos{X: 1})
+			if dr > 0 {
+				next = next.MoveP(grid.Pos{Row: 1})
 			} else {
-				next = next.MoveP(grid.Pos{X: -1})
+				next = next.MoveP(grid.Pos{Row: -1})
 			}
 			if next == end {
 				paths = append(paths, append(day21ClonePath(cur), next))
@@ -177,12 +177,12 @@ func day21GenOpts(controller day21Controller, start, end grid.Pos) []string {
 				queue = append(queue, append(day21ClonePath(cur), next))
 			}
 		}
-		if dy != 0 {
+		if dc != 0 {
 			next := start
-			if dy > 0 {
-				next = next.MoveP(grid.Pos{Y: 1})
+			if dc > 0 {
+				next = next.MoveP(grid.Pos{Col: 1})
 			} else {
-				next = next.MoveP(grid.Pos{Y: -1})
+				next = next.MoveP(grid.Pos{Col: -1})
 			}
 			if next == end {
 				paths = append(paths, append(cur, next))
@@ -196,13 +196,13 @@ func day21GenOpts(controller day21Controller, start, end grid.Pos) []string {
 	for _, path := range paths {
 		entry := ""
 		for i := 1; i < len(path); i++ {
-			if path[i-1].X < path[i].X {
+			if path[i-1].Row < path[i].Row {
 				entry += "v"
-			} else if path[i-1].X > path[i].X {
+			} else if path[i-1].Row > path[i].Row {
 				entry += "^"
-			} else if path[i-1].Y < path[i].Y {
+			} else if path[i-1].Col < path[i].Col {
 				entry += ">"
-			} else if path[i-1].Y > path[i].Y {
+			} else if path[i-1].Col > path[i].Col {
 				entry += "<"
 			}
 		}

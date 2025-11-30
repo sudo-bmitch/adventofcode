@@ -67,7 +67,7 @@ func (g Grid) String() string {
 }
 
 func (g Grid) ValidPos(p Pos) bool {
-	if p.X >= 0 && p.Y >= 0 && p.X < g.H && p.Y < g.W {
+	if p.Row >= 0 && p.Col >= 0 && p.Row < g.H && p.Col < g.W {
 		return true
 	}
 	return false
@@ -75,9 +75,9 @@ func (g Grid) ValidPos(p Pos) bool {
 
 func (g Grid) Walk() iter.Seq2[Pos, rune] {
 	return func(yield func(Pos, rune) bool) {
-		for x := 0; x < g.H; x++ {
-			for y := 0; y < g.W; y++ {
-				if !yield(Pos{X: x, Y: y}, g.G[x][y]) {
+		for r := 0; r < g.H; r++ {
+			for c := 0; c < g.W; c++ {
+				if !yield(Pos{Row: r, Col: c}, g.G[r][c]) {
 					return
 				}
 			}
@@ -86,11 +86,12 @@ func (g Grid) Walk() iter.Seq2[Pos, rune] {
 }
 
 type Pos struct {
-	X, Y int
+	Row int
+	Col int
 }
 
 func (p Pos) MoveP(m Pos) Pos {
-	return Pos{X: p.X + m.X, Y: p.Y + m.Y}
+	return Pos{Row: p.Row + m.Row, Col: p.Col + m.Col}
 }
 
 func (p Pos) MoveD(d Dir) Pos {
@@ -98,7 +99,7 @@ func (p Pos) MoveD(d Dir) Pos {
 }
 
 func (p Pos) String() string {
-	return fmt.Sprintf("[%d,%d]", p.X, p.Y)
+	return fmt.Sprintf("[%d,%d]", p.Row, p.Col)
 }
 
 type Dir int
@@ -112,10 +113,10 @@ const (
 )
 
 var DirPos = [DirLen]Pos{
-	North: {X: -1},
-	East:  {Y: 1},
-	South: {X: 1},
-	West:  {Y: -1},
+	North: {Row: -1},
+	East:  {Col: 1},
+	South: {Row: 1},
+	West:  {Col: -1},
 }
 
 func (d Dir) String() string {
@@ -135,7 +136,7 @@ func (d Dir) String() string {
 
 func DirIter() iter.Seq[Dir] {
 	return func(yield func(Dir) bool) {
-		for d := North; d < DirLen; d++ {
+		for d := range DirLen {
 			if !yield(d) {
 				return
 			}

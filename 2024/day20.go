@@ -38,11 +38,11 @@ func day20Run(rdr io.Reader, minSave, maxJump int) (int, error) {
 	for p, r := range g.Walk() {
 		if r == 'S' {
 			start = p
-			g.G[p.X][p.Y] = '.'
+			g.G[p.Row][p.Col] = '.'
 		}
 		if r == 'E' {
 			end = p
-			g.G[p.X][p.Y] = '.'
+			g.G[p.Row][p.Col] = '.'
 		}
 	}
 	bestStart, err := day20CalcBest(g, start)
@@ -64,22 +64,22 @@ func day20Run(rdr io.Reader, minSave, maxJump int) (int, error) {
 		if !ok {
 			continue
 		}
-		for dx := -1 * maxJump; dx <= maxJump; dx++ {
-			dxAbs := dx
-			if dxAbs < 0 {
-				dxAbs *= -1
+		for dr := -1 * maxJump; dr <= maxJump; dr++ {
+			drAbs := dr
+			if drAbs < 0 {
+				drAbs *= -1
 			}
-			for dy := dxAbs - maxJump; dy <= maxJump-dxAbs; dy++ {
-				pe := grid.Pos{X: ps.X + dx, Y: ps.Y + dy}
+			for dc := drAbs - maxJump; dc <= maxJump-drAbs; dc++ {
+				pe := grid.Pos{Row: ps.Row + dr, Col: ps.Col + dc}
 				be, ok := bestEnd[pe]
 				if !ok {
 					continue
 				}
-				dyAbs := dy
+				dyAbs := dc
 				if dyAbs < 0 {
 					dyAbs *= -1
 				}
-				if bs+be+dxAbs+dyAbs <= bestGoal {
+				if bs+be+drAbs+dyAbs <= bestGoal {
 					sum++
 				}
 			}
@@ -99,7 +99,7 @@ func day20CalcBest(g grid.Grid, start grid.Pos) (map[grid.Pos]int, error) {
 		cur := search[0]
 		for d := range grid.DirIter() {
 			check := cur.MoveD(d)
-			if !g.ValidPos(check) || g.G[check.X][check.Y] == '#' {
+			if !g.ValidPos(check) || g.G[check.Row][check.Col] == '#' {
 				continue
 			}
 			if nb, ok := best[check]; !ok || nb > best[cur]+1 {

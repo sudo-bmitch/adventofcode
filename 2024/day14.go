@@ -19,9 +19,9 @@ func init() {
 func day14a(args []string, rdr io.Reader) (string, error) {
 	quadrants := [4]int{}
 	seconds := 100
-	// maxX, maxY := 11, 7 // test values
-	maxX, maxY := 101, 103 // run values
-	midX, midY := (maxX-1)/2, (maxY-1)/2
+	// maxR, maxC := 11, 7 // test values
+	maxR, maxC := 101, 103 // run values
+	midR, midC := (maxR-1)/2, (maxC-1)/2
 	lineRe := regexp.MustCompile(`^\s*p=(-?\d+),(-?\d+)\s+v=(-?\d+),(-?\d+)`)
 	in := bufio.NewScanner(rdr)
 	for in.Scan() {
@@ -30,44 +30,44 @@ func day14a(args []string, rdr io.Reader) (string, error) {
 		if len(lineSplit) != 5 {
 			return "", fmt.Errorf("failed to parse line: %s", line)
 		}
-		px, err := strconv.Atoi(lineSplit[1])
+		pr, err := strconv.Atoi(lineSplit[1])
 		if err != nil {
 			return "", fmt.Errorf("failed to parse px from line: %s, %w", line, err)
 		}
-		py, err := strconv.Atoi(lineSplit[2])
+		pc, err := strconv.Atoi(lineSplit[2])
 		if err != nil {
 			return "", fmt.Errorf("failed to parse py from line: %s, %w", line, err)
 		}
-		vx, err := strconv.Atoi(lineSplit[3])
+		vr, err := strconv.Atoi(lineSplit[3])
 		if err != nil {
 			return "", fmt.Errorf("failed to parse vx from line: %s, %w", line, err)
 		}
-		vy, err := strconv.Atoi(lineSplit[4])
+		vc, err := strconv.Atoi(lineSplit[4])
 		if err != nil {
 			return "", fmt.Errorf("failed to parse vy from line: %s, %w", line, err)
 		}
-		px = (px + vx*seconds) % maxX
-		py = (py + vy*seconds) % maxY
-		if px < 0 {
-			px += maxX
+		pr = (pr + vr*seconds) % maxR
+		pc = (pc + vc*seconds) % maxC
+		if pr < 0 {
+			pr += maxR
 		}
-		if py < 0 {
-			py += maxY
+		if pc < 0 {
+			pc += maxC
 		}
-		fmt.Printf("result of %s: %d,%d\n", line, px, py)
-		if px < midX {
-			if py < midY {
+		fmt.Printf("result of %s: %d,%d\n", line, pr, pc)
+		if pr < midR {
+			if pc < midC {
 				quadrants[0]++
 			}
-			if py > midY {
+			if pc > midC {
 				quadrants[1]++
 			}
 		}
-		if px > midX {
-			if py < midY {
+		if pr > midR {
+			if pc < midC {
 				quadrants[2]++
 			}
-			if py > midY {
+			if pc > midC {
 				quadrants[3]++
 			}
 		}
@@ -79,7 +79,7 @@ func day14a(args []string, rdr io.Reader) (string, error) {
 
 func day14b(args []string, rdr io.Reader) (string, error) {
 	robots := []day14Robot{}
-	maxX, maxY := 101, 103
+	maxR, maxC := 101, 103
 	lineRe := regexp.MustCompile(`^\s*p=(-?\d+),(-?\d+)\s+v=(-?\d+),(-?\d+)`)
 	in := bufio.NewScanner(rdr)
 	for in.Scan() {
@@ -92,25 +92,25 @@ func day14b(args []string, rdr io.Reader) (string, error) {
 		if len(lineSplit) != 5 {
 			return "", fmt.Errorf("failed to parse line: %s", line)
 		}
-		px, err := strconv.Atoi(lineSplit[1])
+		pr, err := strconv.Atoi(lineSplit[1])
 		if err != nil {
 			return "", fmt.Errorf("failed to parse px from line: %s, %w", line, err)
 		}
-		py, err := strconv.Atoi(lineSplit[2])
+		pc, err := strconv.Atoi(lineSplit[2])
 		if err != nil {
 			return "", fmt.Errorf("failed to parse py from line: %s, %w", line, err)
 		}
-		vx, err := strconv.Atoi(lineSplit[3])
+		vr, err := strconv.Atoi(lineSplit[3])
 		if err != nil {
 			return "", fmt.Errorf("failed to parse vx from line: %s, %w", line, err)
 		}
-		vy, err := strconv.Atoi(lineSplit[4])
+		vc, err := strconv.Atoi(lineSplit[4])
 		if err != nil {
 			return "", fmt.Errorf("failed to parse vy from line: %s, %w", line, err)
 		}
 		robots = append(robots, day14Robot{
-			p: grid.Pos{X: px, Y: py},
-			v: grid.Pos{X: vx, Y: vy},
+			p: grid.Pos{Row: pr, Col: pc},
+			v: grid.Pos{Row: vr, Col: vc},
 		})
 	}
 
@@ -118,23 +118,23 @@ func day14b(args []string, rdr io.Reader) (string, error) {
 	found := false
 	sum := 0
 	for i := 0; !found; i++ {
-		g, err := grid.New(maxX, maxY)
+		g, err := grid.New(maxR, maxC)
 		if err != nil {
 			return "", err
 		}
 		for p := range g.Walk() {
-			g.G[p.X][p.Y] = ' '
+			g.G[p.Row][p.Col] = ' '
 		}
 		for _, r := range robots {
-			px := (r.p.X + r.v.X*i) % maxX
-			py := (r.p.Y + r.v.Y*i) % maxY
-			if px < 0 {
-				px += maxX
+			pr := (r.p.Row + r.v.Row*i) % maxR
+			pc := (r.p.Col + r.v.Col*i) % maxC
+			if pr < 0 {
+				pr += maxR
 			}
-			if py < 0 {
-				py += maxY
+			if pc < 0 {
+				pc += maxC
 			}
-			g.G[py][px] = '#'
+			g.G[pc][pr] = '#'
 		}
 		for _, row := range g.G {
 			if strings.Contains(string(row), search) {

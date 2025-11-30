@@ -26,11 +26,11 @@ func day16a(args []string, rdr io.Reader) (string, error) {
 	}
 
 	// locate starting position
-	for p, r := range g.Walk() {
-		if r == 'S' {
+	for p, v := range g.Walk() {
+		if v == 'S' {
 			startPos = p
 		}
-		if r == 'E' {
+		if v == 'E' {
 			endPos = p
 		}
 	}
@@ -73,7 +73,7 @@ func day16a(args []string, rdr io.Reader) (string, error) {
 		leftPos := curPos.MoveD(day16Turns[path.d][0])
 		rightPos := curPos.MoveD(day16Turns[path.d][1])
 		// if turn is valid, append to list of paths
-		if g.ValidPos(leftPos) && g.G[leftPos.X][leftPos.Y] != '#' && !path.loop(leftPos) && (bestAtPos[leftPos] == 0 || bestAtPos[leftPos] > path.score) {
+		if g.ValidPos(leftPos) && g.G[leftPos.Row][leftPos.Col] != '#' && !path.loop(leftPos) && (bestAtPos[leftPos] == 0 || bestAtPos[leftPos] > path.score) {
 			leftPath := path.clone()
 			leftPath.p = append(leftPath.p, leftPos)
 			leftPath.d = day16Turns[path.d][0]
@@ -83,7 +83,7 @@ func day16a(args []string, rdr io.Reader) (string, error) {
 				bestAtPos[leftPos] = leftPath.score
 			}
 		}
-		if g.ValidPos(rightPos) && g.G[rightPos.X][rightPos.Y] != '#' && !path.loop(rightPos) && (bestAtPos[rightPos] == 0 || bestAtPos[rightPos] > path.score) {
+		if g.ValidPos(rightPos) && g.G[rightPos.Row][rightPos.Col] != '#' && !path.loop(rightPos) && (bestAtPos[rightPos] == 0 || bestAtPos[rightPos] > path.score) {
 			rightPath := path.clone()
 			rightPath.p = append(rightPath.p, rightPos)
 			rightPath.d = day16Turns[path.d][1]
@@ -93,7 +93,7 @@ func day16a(args []string, rdr io.Reader) (string, error) {
 				bestAtPos[rightPos] = rightPath.score
 			}
 		}
-		if g.ValidPos(straightPos) && g.G[straightPos.X][straightPos.Y] != '#' && !path.loop(straightPos) && (bestAtPos[straightPos] == 0 || bestAtPos[straightPos]+addTurn > path.score) {
+		if g.ValidPos(straightPos) && g.G[straightPos.Row][straightPos.Col] != '#' && !path.loop(straightPos) && (bestAtPos[straightPos] == 0 || bestAtPos[straightPos]+addTurn > path.score) {
 			// increment straight
 			paths[0].p = append(paths[0].p, straightPos)
 			paths[0].score += addStraight
@@ -111,7 +111,7 @@ func day16a(args []string, rdr io.Reader) (string, error) {
 	}
 
 	for _, p := range bestPath.p {
-		g.G[p.X][p.Y] = '*'
+		g.G[p.Row][p.Col] = '*'
 	}
 	fmt.Printf("best path found:\n%s\n", g.String())
 
@@ -187,7 +187,7 @@ func day16b(args []string, rdr io.Reader) (string, error) {
 		leftPos := curPos.MoveD(day16Turns[path.d][0])
 		rightPos := curPos.MoveD(day16Turns[path.d][1])
 		// if turn is valid, append to list of paths
-		if g.ValidPos(leftPos) && g.G[leftPos.X][leftPos.Y] != '#' && !path.loop(leftPos) && (bestAtPos[leftPos] == 0 || bestAtPos[leftPos]+(addTurn*3) > path.score) {
+		if g.ValidPos(leftPos) && g.G[leftPos.Row][leftPos.Col] != '#' && !path.loop(leftPos) && (bestAtPos[leftPos] == 0 || bestAtPos[leftPos]+(addTurn*3) > path.score) {
 			leftPath := path.clone()
 			leftPath.p = append(leftPath.p, leftPos)
 			leftPath.d = day16Turns[path.d][0]
@@ -197,7 +197,7 @@ func day16b(args []string, rdr io.Reader) (string, error) {
 				bestAtPos[leftPos] = leftPath.score
 			}
 		}
-		if g.ValidPos(rightPos) && g.G[rightPos.X][rightPos.Y] != '#' && !path.loop(rightPos) && (bestAtPos[rightPos] == 0 || bestAtPos[rightPos]+(addTurn*3) > path.score) {
+		if g.ValidPos(rightPos) && g.G[rightPos.Row][rightPos.Col] != '#' && !path.loop(rightPos) && (bestAtPos[rightPos] == 0 || bestAtPos[rightPos]+(addTurn*3) > path.score) {
 			rightPath := path.clone()
 			rightPath.p = append(rightPath.p, rightPos)
 			rightPath.d = day16Turns[path.d][1]
@@ -207,7 +207,7 @@ func day16b(args []string, rdr io.Reader) (string, error) {
 				bestAtPos[rightPos] = rightPath.score
 			}
 		}
-		if g.ValidPos(straightPos) && g.G[straightPos.X][straightPos.Y] != '#' && !path.loop(straightPos) && (bestAtPos[straightPos] == 0 || bestAtPos[straightPos]+(addTurn*3) > path.score) {
+		if g.ValidPos(straightPos) && g.G[straightPos.Row][straightPos.Col] != '#' && !path.loop(straightPos) && (bestAtPos[straightPos] == 0 || bestAtPos[straightPos]+(addTurn*3) > path.score) {
 			// increment straight
 			paths[0].p = append(paths[0].p, straightPos)
 			paths[0].score += addStraight
@@ -226,8 +226,8 @@ func day16b(args []string, rdr io.Reader) (string, error) {
 
 	countSeats := 0
 	for _, p := range bestPosList {
-		if g.G[p.X][p.Y] != 'O' {
-			g.G[p.X][p.Y] = 'O'
+		if g.G[p.Row][p.Col] != 'O' {
+			g.G[p.Row][p.Col] = 'O'
 			countSeats++
 		}
 	}

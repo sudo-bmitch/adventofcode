@@ -21,12 +21,12 @@ func day06a(args []string, rdr io.Reader) (string, error) {
 	curPos := grid.Pos{}
 	curDir := grid.North
 	found := false
-	for x := 0; x < g.H && !found; x++ {
-		for y := 0; y < g.W && !found; y++ {
-			if g.G[x][y] == '^' {
-				g.G[x][y] = '.'
-				curPos.X = x
-				curPos.Y = y
+	for r := 0; r < g.H && !found; r++ {
+		for c := 0; c < g.W && !found; c++ {
+			if g.G[r][c] == '^' {
+				g.G[r][c] = '.'
+				curPos.Row = r
+				curPos.Col = c
 				found = true
 			}
 		}
@@ -39,7 +39,7 @@ func day06a(args []string, rdr io.Reader) (string, error) {
 		if !g.ValidPos(nextPos) {
 			break
 		}
-		if g.G[nextPos.X][nextPos.Y] == '.' {
+		if g.G[nextPos.Row][nextPos.Col] == '.' {
 			curPos = nextPos
 		} else {
 			curDir = day06TurnRight[curDir]
@@ -58,12 +58,12 @@ func day06b(args []string, rdr io.Reader) (string, error) {
 	// find starting position
 	startPos := grid.Pos{}
 	found := false
-	for x := 0; x < g.H && !found; x++ {
-		for y := 0; y < g.W && !found; y++ {
-			if g.G[x][y] == '^' {
-				g.G[x][y] = '.'
-				startPos.X = x
-				startPos.Y = y
+	for r := 0; r < g.H && !found; r++ {
+		for c := 0; c < g.W && !found; c++ {
+			if g.G[r][c] == '^' {
+				g.G[r][c] = '.'
+				startPos.Row = r
+				startPos.Col = c
 				found = true
 			}
 		}
@@ -78,7 +78,7 @@ func day06b(args []string, rdr io.Reader) (string, error) {
 		if !g.ValidPos(nextPos) {
 			break
 		}
-		if g.G[nextPos.X][nextPos.Y] == '.' {
+		if g.G[nextPos.Row][nextPos.Col] == '.' {
 			curPos = nextPos
 		} else {
 			curDir = day06TurnRight[curDir]
@@ -89,9 +89,9 @@ func day06b(args []string, rdr io.Reader) (string, error) {
 		if testLoc == startPos {
 			continue // skip testing start position
 		}
-		x, y := testLoc.X, testLoc.Y
+		r, c := testLoc.Row, testLoc.Col
 		// test with new obstruction in the location
-		g.G[x][y] = '#'
+		g.G[r][c] = '#'
 		curPos := startPos
 		curDir := grid.North
 		// track loops by observing where the same position and direction are repeated
@@ -111,13 +111,13 @@ func day06b(args []string, rdr io.Reader) (string, error) {
 				// walked off the map
 				break
 			}
-			if g.G[nextPos.X][nextPos.Y] == '.' {
+			if g.G[nextPos.Row][nextPos.Col] == '.' {
 				curPos = nextPos
 			} else {
 				curDir = day06TurnRight[curDir]
 			}
 		}
-		g.G[x][y] = '.' // reset map
+		g.G[r][c] = '.' // reset map
 	}
 	return fmt.Sprintf("%d", sum), nil
 }

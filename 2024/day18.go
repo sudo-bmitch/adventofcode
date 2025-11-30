@@ -57,7 +57,7 @@ func day18Run(w, h int, rdr io.Reader, limit int) (int, error) {
 		return 0, err
 	}
 	for p := range g.Walk() {
-		g.G[p.X][p.Y] = '.'
+		g.G[p.Row][p.Col] = '.'
 	}
 	in := bufio.NewScanner(rdr)
 	lines := 0
@@ -72,18 +72,18 @@ func day18Run(w, h int, rdr io.Reader, limit int) (int, error) {
 		if len(nums) != 2 {
 			return 0, fmt.Errorf("invalid line: %s", line)
 		}
-		x, err := strconv.Atoi(nums[0])
+		r, err := strconv.Atoi(nums[0])
 		if err != nil {
-			return 0, fmt.Errorf("failed converting x(%s) in line %s: %w", nums[0], line, err)
+			return 0, fmt.Errorf("failed converting r(%s) in line %s: %w", nums[0], line, err)
 		}
-		y, err := strconv.Atoi(nums[1])
+		c, err := strconv.Atoi(nums[1])
 		if err != nil {
-			return 0, fmt.Errorf("failed converting y(%s) in line %s: %w", nums[1], line, err)
+			return 0, fmt.Errorf("failed converting c(%s) in line %s: %w", nums[1], line, err)
 		}
-		if x > h || y > w {
-			return 0, fmt.Errorf("coordinates out of range: %d,%d on line %s", x, y, line)
+		if r > h || c > w {
+			return 0, fmt.Errorf("coordinates out of range: %d,%d on line %s", r, c, line)
 		}
-		g.G[x][y] = '#'
+		g.G[r][c] = '#'
 		// only read lines up to limit
 		lines++
 		if lines >= limit {
@@ -91,12 +91,12 @@ func day18Run(w, h int, rdr io.Reader, limit int) (int, error) {
 		}
 	}
 	// bfs over grid for shortest path from 0,0 to w,h
-	goal := grid.Pos{X: h - 1, Y: w - 1}
+	goal := grid.Pos{Row: h - 1, Col: w - 1}
 	paths := []day18Path{
-		{{X: 0, Y: 0}},
+		{{Row: 0, Col: 0}},
 	}
 	best := map[grid.Pos]int{
-		{X: 0, Y: 0}: 1,
+		{Row: 0, Col: 0}: 1,
 	}
 	for len(paths) > 0 {
 		// sort by path length, always try to move the shortest entry first
@@ -111,9 +111,9 @@ func day18Run(w, h int, rdr io.Reader, limit int) (int, error) {
 		})
 		// for the head entry, try each direction
 		curPos := paths[0][len(paths[0])-1]
-		for d := grid.North; d < grid.DirLen; d++ {
+		for d := range grid.DirLen {
 			nextPos := curPos.MoveD(d)
-			if !g.ValidPos(nextPos) || g.G[nextPos.X][nextPos.Y] == '#' || !paths[0].valid(nextPos) {
+			if !g.ValidPos(nextPos) || g.G[nextPos.Row][nextPos.Col] == '#' || !paths[0].valid(nextPos) {
 				// skip entries that leave the map, hit a wall, or loop
 				continue
 			}
