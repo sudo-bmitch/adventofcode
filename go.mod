@@ -1,3 +1,3 @@
 module github.com/sudo-bmitch/adventofcode
 
-go 1.23
+go 1.25
