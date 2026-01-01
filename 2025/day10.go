@@ -73,102 +73,160 @@ func day10b(args []string, rdr io.Reader) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	out := make(chan int)
 
 	for i, machine := range machines {
-		// this should be solved with liner algebra, but I wasn't smart enough to implement that in Go.
-		// check each machine concurrently to offset just how inefficient this is
-		go func() {
-			best := math.MaxInt
-			// track number of button presses in an array, starting with all buttons at zero
-			buttonPresses := make([]int, len(machine.buttonSchematics))
-			for {
-				result := make([]int, len(machine.joltageReq))
-				// compute the result based on the current button presses
-				for buttonCur, buttonCount := range buttonPresses {
-					for _, counter := range machine.buttonSchematics[buttonCur] {
-						result[counter] += buttonCount
-					}
-				}
-				// check the result vs the desired joltage, note any low counters
-				high, low := false, false
-				lowCounters := make([]bool, len(machine.joltageReq))
-				for ji, val := range result {
-					if val > machine.joltageReq[ji] {
-						high = true
-					}
-					if val < machine.joltageReq[ji] {
-						low = true
-						lowCounters[ji] = true
-					}
-				}
-				if !low && !high {
-					// match found, compute number of presses, and update best count if better
-					count := 0
-					for _, n := range buttonPresses {
-						count += n
-					}
-					if count < best {
-						if debug {
-							fmt.Fprintf(os.Stderr, "machine %d, best count now %d, found button presses %v\n", i, count, buttonPresses)
-						}
-						best = count
-					}
-				}
-				if low && !high {
-					// at least one value is low and no values are high, increment by finding last button that would result in all low charges incrementing
-					cur := len(buttonPresses) - 1
-					for cur >= 0 {
-						// unmark entries that the current button increments
-						for _, counter := range machine.buttonSchematics[cur] {
-							lowCounters[counter] = false
-						}
-						noneLow := true
-						for _, b := range lowCounters {
-							if b {
-								noneLow = false
-								break
-							}
-						}
-						if noneLow {
+		matrix := make([][]int, len(machine.joltageReq))
+		for row, joltage := range machine.joltageReq {
+			matrix[row] = make([]int, len(machine.buttonSchematics)+1)
+			matrix[row][len(machine.buttonSchematics)] = joltage
+		}
+		for col, buttons := range machine.buttonSchematics {
+			for _, row := range buttons {
+				matrix[row][col] = 1
+			}
+		}
+		day10GaussianElimination(matrix, 0, 0)
+		if debug {
+			fmt.Fprintf(os.Stderr, "machine %d matrix:\n", i)
+			for _, row := range matrix {
+				fmt.Fprintf(os.Stderr, "  %v\n", row)
+			}
+		}
+
+		// process the matrix to find the smallest sum of button values where each value is a integer >= 0
+		// fail if any value is fractional or negative
+		buttons := make([]struct {
+			bound, dependent bool
+			cur, max, row    int
+		}, len(machine.buttonSchematics))
+		for col := range len(buttons) {
+			rowMatch := -1
+			allZero := true
+			for row := range len(matrix) {
+				if matrix[row][col] != 0 {
+					for otherCol := range len(matrix[row]) - 1 {
+						if otherCol != col && matrix[row][otherCol] != 0 {
+							allZero = false
 							break
 						}
-						cur--
 					}
-					// increment current button and zero remaining buttons
-					buttonPresses[cur]++
-					for bi := cur + 1; bi < len(buttonPresses); bi++ {
-						buttonPresses[bi] = 0
-					}
-				} else {
-					// either a match or at least one high value, iterate by decreasing last non-zero button to zero and increment previous button
-					// if only first button was non-zero, break
-					cur := len(buttonPresses) - 1
-					for cur >= 0 && buttonPresses[cur] == 0 {
-						cur--
-					}
-					if cur == 0 {
+					if rowMatch != -1 {
+						rowMatch = -2 // variable value
 						break
 					}
-					buttonPresses[cur] = 0
-					buttonPresses[cur-1]++
+					rowMatch = row
 				}
 			}
-			if debug {
-				fmt.Fprintf(os.Stderr, "machine %d requires %d button presses\n", i, best)
+			switch rowMatch {
+			case -1:
+				// no matches
+				buttons[col].bound = true // bound to 0
+			case -2:
+				// multiple matches, set the max, the min is always 0
+				limit := math.MaxInt
+				for _, joltage := range machine.buttonSchematics[col] {
+					limit = min(limit, machine.joltageReq[joltage])
+				}
+				buttons[col].max = limit
+			default:
+				if allZero {
+					// exact match
+					buttons[col].cur = matrix[rowMatch][len(matrix[rowMatch])-1]
+					if matrix[rowMatch][col] != 1 {
+						if buttons[col].cur%matrix[rowMatch][col] != 0 {
+							// fail on a fractional value
+							return "", fmt.Errorf("failed to compute exact value for %d using row %v", col, matrix[rowMatch])
+						}
+						buttons[col].cur /= matrix[rowMatch][col]
+					}
+					buttons[col].bound = true
+				} else {
+					buttons[col].row = rowMatch
+					buttons[col].dependent = !allZero
+				}
 			}
-			out <- best
-		}()
-	}
-
-	for i := range machines {
-		sum += <-out
-		if debug {
-			fmt.Fprintf(os.Stderr, "Waiting on %d results, current total of %d machines is %d\n", len(machines)-i-1, i+1, sum)
 		}
+		iterate := func() bool {
+			for col := range len(buttons) {
+				if buttons[col].bound {
+					continue
+				}
+				buttons[col].cur++
+				if buttons[col].cur <= buttons[col].max {
+					return true
+				}
+				buttons[col].cur = 0
+			}
+			return false
+		}
+		best := math.MaxInt
+		ok := true
+		joltages := make([]int, len(machine.joltageReq))
+		for ; ok; ok = iterate() {
+			valid := true
+			// calculate dependent buttons
+			for col := len(buttons) - 1; col >= 0; col-- {
+				if buttons[col].dependent {
+					val := matrix[buttons[col].row][len(matrix[buttons[col].row])-1]
+					// deduct other solved buttons from the value
+					for otherCol, matrixVal := range matrix[buttons[col].row][:len(matrix[buttons[col].row])-1] {
+						if otherCol != col && matrixVal != 0 {
+							val -= matrixVal * buttons[otherCol].cur
+						}
+					}
+					if val < 0 || val%matrix[buttons[col].row][col] != 0 {
+						valid = false
+						break
+					} else {
+						buttons[col].cur = val / matrix[buttons[col].row][col]
+					}
+				}
+			}
+			if !valid {
+				continue
+			}
+			// sum joltages to check for a valid solution
+			for j := range joltages {
+				joltages[j] = 0
+			}
+			for b, buttonSpec := range machine.buttonSchematics {
+				for _, j := range buttonSpec {
+					joltages[j] += buttons[b].cur
+				}
+			}
+			for j := range joltages {
+				if joltages[j] != machine.joltageReq[j] {
+					valid = false
+					break
+				}
+			}
+			if !valid {
+				continue
+			}
+			// if valid, update the best count
+			count := 0
+			for _, button := range buttons {
+				count += button.cur
+			}
+			if count <= best {
+				best = count
+				if debug {
+					fmt.Fprintf(os.Stderr, "machine %d, found solution of %d using [", i, count)
+					for b, button := range buttons {
+						if b != 0 {
+							fmt.Fprint(os.Stderr, ", ")
+						}
+						fmt.Fprintf(os.Stderr, "%d", button.cur)
+					}
+					fmt.Fprint(os.Stderr, "]\n")
+				}
+			}
+		}
+		if best == math.MaxInt {
+			return "", fmt.Errorf("failed to find a solution")
+		}
+		sum += best
 	}
-	close(out)
-
 	return fmt.Sprintf("%d", sum), nil
 }
 
@@ -240,4 +298,116 @@ func day10ReadMachines(rdr io.Reader) ([]day10Machine, error) {
 		machines = append(machines, machine)
 	}
 	return machines, nil
+}
+
+// <https://en.wikipedia.org/wiki/Gaussian_elimination>
+func day10GaussianElimination(matrix [][]int, rowStart, colStart int) {
+	// swap rows to get those with a non-zero col entry up top
+	if rowStart >= len(matrix) || colStart >= len(matrix[rowStart]) {
+		return
+	}
+	rowStop := rowStart - 1
+	for row1 := rowStart; row1 < len(matrix); row1++ {
+		if matrix[row1][colStart] != 0 {
+			rowStop = row1
+			continue
+		}
+		row2 := len(matrix) - 1
+		for row2 > row1 && matrix[row2][colStart] == 0 {
+			row2--
+		}
+		if row2 <= row1 {
+			break
+		}
+		day10Swap(matrix, row1, row2)
+		rowStop = row1
+	}
+	// normalize rows to all start with a positive, preferably a 1
+	rowOne := -1
+	for row := rowStart; row <= rowStop; row++ {
+		if matrix[row][colStart] < 0 {
+			day10Mult(matrix, row, -1)
+		}
+		// reduce to 1 if possible
+		if matrix[row][colStart] > 1 {
+			divAllowed := true
+			for col := colStart + 1; divAllowed && col < len(matrix[row]); col++ {
+				if matrix[row][col]%matrix[row][colStart] != 0 {
+					divAllowed = false
+				}
+			}
+			if divAllowed {
+				div := matrix[row][colStart]
+				for col := colStart; col < len(matrix[row]); col++ {
+					matrix[row][col] /= div
+				}
+			}
+		}
+		// track first row starting with 1 and swap to rowStart if found
+		if matrix[row][colStart] == 1 && rowOne < 0 {
+			rowOne = row
+		}
+	}
+	if rowOne >= 0 && rowOne != rowStart {
+		day10Swap(matrix, rowStart, rowOne)
+	}
+	// reduce following rows with multiply and add
+	if rowStart < rowStop && matrix[rowStart][colStart] >= 1 {
+		for row2 := rowStart + 1; row2 <= rowStop; row2++ {
+			multi1, multi2 := matrix[rowStart][colStart], matrix[row2][colStart]*-1
+			day10Mult(matrix, row2, multi1)
+			day10Add(matrix, rowStart, row2, multi2)
+		}
+	}
+	// recurse on remaining rows/columns
+	day10GaussianElimination(matrix, min(rowStart, rowStop)+1, colStart+1)
+	if rowStart > rowStop || matrix[rowStart][colStart] == 0 {
+		return
+	}
+	// attempt to reduce with division if row does not start with a 1, but do not go into fractions
+	if matrix[rowStart][colStart] > 1 {
+		divAllowed := true
+		for col := colStart + 1; divAllowed && col < len(matrix[rowStart]); col++ {
+			if matrix[rowStart][col]%matrix[rowStart][colStart] != 0 {
+				divAllowed = false
+			}
+		}
+		if divAllowed {
+			div := matrix[rowStart][colStart]
+			for col := colStart; col < len(matrix[rowStart]); col++ {
+				matrix[rowStart][col] /= div
+			}
+		}
+	}
+	// use back-substitution to remove this field from above rows
+	if matrix[rowStart][colStart] >= 1 {
+		for row2 := rowStart - 1; row2 >= 0; row2-- {
+			if matrix[row2][colStart] != 0 {
+				multi1, multi2 := matrix[rowStart][colStart], matrix[row2][colStart]*-1
+				day10Mult(matrix, row2, multi1)
+				day10Add(matrix, rowStart, row2, multi2)
+			}
+		}
+	}
+}
+
+func day10Swap(matrix [][]int, a, b int) {
+	for col := range len(matrix[a]) {
+		matrix[a][col], matrix[b][col] = matrix[b][col], matrix[a][col]
+	}
+}
+
+func day10Mult(matrix [][]int, row, val int) {
+	if val == 1 {
+		return
+	}
+	for col := range len(matrix[row]) {
+		matrix[row][col] *= val
+	}
+}
+
+func day10Add(matrix [][]int, src, tgt, mult int) {
+	for col := range len(matrix[src]) {
+		matrix[tgt][col] += (matrix[src][col] * mult)
+	}
 }
